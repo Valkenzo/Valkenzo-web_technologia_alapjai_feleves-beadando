@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autó műveletek</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div>
+        <h4 for="search">Autó keresése ID alapján (üres mező=összes listázása)</h4>
+        <input type="number" placeholder="1,2,3..." name="search" id="search-input">
+        <button class="btn btn-primary" id="search-btn">Mehet</button>
+    </div>
+    <div id="result" class="display">
+
+    </div>
+    <script src="app.js"></script>
+    <script>
+
+        async function deleteCar(id) {
+
+            if (!checkNeptun()) {
+                return;
+            }
+
+            const isConfirmed = confirm("Biztosan törölni szeretnéd ezt az autót?  ID: " + id);
+
+            if (!isConfirmed) {
+
+                return;
+            }
+
+            try {
+
+                const res = await fetch(`https://iit-playground.arondev.hu/api/${NEPTUN}/car/${id}`, {
+
+                    method: 'DELETE'
+
+                });
+
+                if (!res.ok) {
+
+                    const error = await res.json();
+                    alert(error.message);
+                    return;
+                }
+
+                getCars();
+
+            } catch (err) {
+                alert('Unexpected server error.');
+                console.log(err);
+            }
+        }
+
+
+        function modifyCar(id) {
+
+            if (!checkNeptun()) {
+                return;
+            }
+
+            let carHtml = document.querySelector(`[data-id="${id}"]`);
+            let brand = carHtml.dataset.brand;
+            let model = carHtml.dataset.model;
+            let fuelUse = carHtml.dataset.fueluse;
+            let owner = carHtml.dataset.owner;
+            let dayOfCommission = carHtml.dataset.date;
+            let electric = carHtml.dataset.electric;
+
+            const carHtmlEditable = `<div data-id="${id}" class="card">
+                <h4>Szerkesztés ID: ${id}</h4><br>
+                        <p> <strong>Márka:</strong><input id="brand-inp" type="text"  value="${brand}"></p>
+                          <p><strong>Model:</strong><input id="model-inp" type="text"  value="${model}"></p>
+                            <p><strong>Fogyasztás (L):</strong><input id="fueluse-inp" type="number"  value="${fuelUse}"></p>
+                              <p><strong>Tulajdonos:</strong><input id="owner-inp" type="text"  value="${owner}"></p>
+                                <p><strong>Vétel időpontja:</strong><input id="date-inp" type="date"  value="${dayOfCommission}"></p>
+                                  <p><strong>Elektromos:</strong><input id="electric-inp" type="checkbox" ${JSON.parse(electric) ? 'checked' : ''} ></p>
+                                     <button  class="btn btn-primary" id="save-car-btn">Mentés</button>
+                                    <button  class="btn btn-primary" id="cancel-car-btn">Mégse</button>
+                                  </div>`;
+
+
+            const carList = document.querySelector('#result');
+            carList.innerHTML = carHtmlEditable;
+
+            const electrinInp = document.querySelector('#electric-inp');
+            electrinInp.addEventListener('click', () => {
+
+                const fueluseInp = document.querySelector("#fueluse-inp");
+
+
+                if (electrinInp.checked) {
+                    fueluseInp.disabled = true;
+                    fueluseInp.value = 0;
+                }
+
+                else {
+                    fueluseInp.disabled = false;
+                    fueluseInp.value = '';
+                }
+
+
+
+            });
+
+            const saveCarBtn = document.querySelector('#save-car-btn');
+            saveCarBtn.addEventListener('click', () => {
+
+                brand = document.querySelector("#brand-inp").value;
+                model = document.querySelector("#model-inp").value;
+                fuelUse = document.querySelector("#fueluse-inp").value;
+                owner = document.querySelector("#owner-inp").value;;
+                dayOfCommission = document.querySelector("#date-inp").value;
+                electric = document.querySelector("#electric-inp").checked;
+
+                const car = {
+
+                    id: id,
+                    brand: brand,
+                    model: model,
+                    fuelUse: fuelUse,
+                    owner: owner,
+                    dayOfCommission: dayOfCommission,
+                    electric: electric
+
+                };
+
+                saveCar(car).then(res => {
+                    if (res) {
+                        carList.innerHTML = '';
+                    }
+                })
+                 
+            });
+
+            const cancelCarBtn = document.querySelector('#cancel-car-btn');
+            cancelCarBtn.addEventListener('click', () => {
+                carList.innerHTML = '';
+
+            });
+
+        }
+
+
+        async function saveCar(car) {
+
+            if (!checkNeptun()) {
+                return false;
+            }
+
+            try {
+                const res = await fetch(`https://iit-playground.arondev.hu/api/${NEPTUN}/car`, {
+
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(car)
+
+
+                });
+
+
+                if (!res.ok) {
+
+                    const error = await res.json();
+                    alert(error.message);
+                    return false;
+                }
+
+                const resCar = await res.json();
+                alert(`Autó módosítása sikeres! (ID: ${resCar.id})`);
+                return true;
+
+            } catch (err) {
+                alert('Unexpected server error.');
+                console.log(err);
+                return false;
+            }
+        }
+
+
+        async function getCars(id) {
+
+            if (!checkNeptun()) {
+                return;
+            }
+
+            try {
+
+                let res;
+
+                if (Number.isNaN(parseInt(id))) {
+                    res = await fetch(`https://iit-playground.arondev.hu/api/${NEPTUN}/car/`);
+                }
+
+                else res = await fetch(`https://iit-playground.arondev.hu/api/${NEPTUN}/car/${id}`);
+
+                if (!res.ok) {
+
+                    const error = await res.json();
+                    alert(error.message);
+                    return;
+                }
+
+                const resCars = await res.json();
+                let carsHtml = "";
+                const carList = document.querySelector('#result');
+
+                //Összes id
+                if (Number.isNaN(parseInt(id))) {
+                    for (const car of resCars) {
+
+                        const carHtml = `
+                    <div data-id=${car.id} 
+                    data-brand="${car.brand}"
+                    data-model="${car.model}" 
+                    data-fueluse=${car.fuelUse} 
+                    data-owner="${car.owner}" 
+                    data-date=${car.dayOfCommission}
+                    data-electric=${car.electric ? true : false} 
+                    class=${car.electric ? "card-electric" : "card"}>
+                    <p><strong>ID:</strong> ${car.id}</p>
+                    <p> <strong>Márka:</strong> ${car.brand}</p>
+                    <p><strong>Model:</strong> ${car.model}</p>
+                    <p><strong>Fogyasztás:</strong> ${car.fuelUse} L</p>
+                    <p><strong>Tulajdonos:</strong> ${car.owner}</p>
+                    <p><strong>Vétel időpontja:</strong> ${car.dayOfCommission}</p>
+                    <p><strong>Elektromos-e?:</strong> ${car.electric ? "Igen" : "Nem"}</p>
+                    <button  class="btn btn-primary" onclick="modifyCar(${car.id})">Szerkesztés</button>
+                    <button  class="btn btn-delete" onclick="deleteCar(${car.id})">Törlés</button>
+                    </div>
+                    `;
+
+                        carsHtml += carHtml;
+
+                    }
+
+
+                }
+
+                // 1 db id
+                else {
+
+                    const carHtml = `
+<div data-id=${resCars.id}
+ data-brand="${resCars.brand}" data-model="${resCars.model}"
+  data-fueluse=${resCars.fuelUse} data-owner="${resCars.owner}" 
+  data-date="${resCars.dayOfCommission}" data-electric=${resCars.electric ? true : false}
+   class=${resCars.electric ? "card-electric" : "card"}>
+                        <p><strong>ID:</strong> ${resCars.id}</p>
+                        <p><strong>Márka:</strong> ${resCars.brand}</p>
+                          <p><strong>Model:</strong> ${resCars.model}</p>
+                            <p><strong>Fogyasztás:</strong> ${resCars.fuelUse} L</p>
+                              <p><strong>Tulajdonos:</strong> ${resCars.owner}</p>
+                                <p><strong>Vétel időpontja:</strong> ${resCars.dayOfCommission}</p>
+                                <p><strong>Elektromos-e?:</strong> ${resCars.electric ? "Igen" : "Nem"}</p>
+                               
+                        <button  class="btn btn-primary" onclick="modifyCar(${resCars.id})">Szerkesztés</button>
+                         <button  class="btn btn-delete" onclick="deleteCar(${resCars.id})">Törlés</button>
+                                </div>
+                    
+                    `;
+                    carsHtml += carHtml;
+
+                }
+
+
+                carList.classList.remove("fade-in");
+                void carList.offsetWidth;
+                carList.innerHTML = carsHtml;
+                carList.classList.add("fade-in");
+                carList.insertAdjacentHTML('afterbegin', `<h4 class="display-first">Találatok:</h4>`);
+
+            } catch (err) {
+                alert('Unexpected server error.');
+                console.log(err);
+            }
+        }
+
+
+        document.querySelector('#search-btn').addEventListener('click', () => {
+
+            const inputElem = document.querySelector('#search-input');
+            const inputTxt = inputElem.value;
+
+
+            getCars(inputTxt);
+            inputElem.value = '';
+
+        });
+
+    </script>
+</body>
+
+</html>

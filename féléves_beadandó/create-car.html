@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autó létrehozása</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <h4>Új autó</h4>
+    <div class="card">
+
+        <h4>Márka:</h4>
+        <input type="text" id="brand"><br><br>
+
+        <h4>Modell:</h4>
+        <input type="text" id="model"><br><br>
+
+        <h4>Fogyasztás:</h4>
+        <input type="number" id="fuelUse"><br><br>
+
+        <h4>Tulajdonos:</h4>
+        <input type="text" id="owner"><br><br>
+
+        <h4>Forgalomba helyezés napja:</h4>
+        <input type="date" id="dayOfCommission"><br><br>
+
+        <h4>Elektromos:</h4>
+        <input type="checkbox" id="electric"><br><br>
+
+        <button class="btn btn-primary" id="create">Létrehozás</button>
+    </div>
+
+
+
+    <script src="app.js"></script>
+    <script>
+        async function createCar(car) {
+
+            if (!checkNeptun()) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`https://iit-playground.arondev.hu/api/${NEPTUN}/car`, {
+
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(car)
+
+
+                });
+
+
+                if (!res.ok) {
+
+                    const error = await res.json();
+                    alert(error.message);
+                    return;
+                }
+
+                const resCar = await res.json();
+                alert(`Autó elküldése szerverre sikeres! (ID: ${resCar.id})`);
+                
+
+
+            } catch (err) {
+                alert('Unexpected server error.');
+                console.log(err);
+            }
+        }
+
+        const electrChk = document.querySelector('#electric');
+        electrChk.addEventListener('click', () => {
+
+            const fuelUseElem = document.querySelector('#fuelUse');
+
+            if (electrChk.checked) {
+                fuelUseElem.value = 0;
+            }
+
+            else fuelUseElem.value = null;
+
+            fuelUseElem.disabled = electrChk.checked;
+        });
+
+        const createBtn = document.querySelector('#create');
+        createBtn.addEventListener('click', () => {
+
+            const brandElem = document.querySelector('#brand');
+            const brand = brandElem.value;
+
+            const modelElem = document.querySelector('#model');
+            const model = modelElem.value;
+
+            const fuelUseElem = document.querySelector('#fuelUse');
+            const fuelUse = fuelUseElem.value;
+
+            const ownerElem = document.querySelector('#owner');
+            const owner = ownerElem.value;
+
+            const dayOfCommissionElem = document.querySelector('#dayOfCommission');
+            const dayOfCommission = dayOfCommissionElem.value;
+
+            const electricElem = document.querySelector('#electric');
+            const electric = electricElem.checked;
+
+            const car = {
+
+                brand: brand,
+                model: model,
+                fuelUse: fuelUse,
+                owner: owner,
+                dayOfCommission: dayOfCommission,
+                electric: electric
+
+            };
+
+            createCar(car).then(() => {
+
+
+                brandElem.value = '';
+                modelElem.value = '';
+                fuelUseElem.value = '';
+                ownerElem.value = '';
+                dayOfCommissionElem.value = '';
+                electricElem.checked = false;
+                fuelUseElem.disabled = electrChk.checked;
+
+
+            });
+
+        });
+    </script>
+</body>
+
+</html>
